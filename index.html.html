@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snake – Custom Edition</title>
+<style>
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 20px;
+    background: #111827;
+    color: #f9fafb;
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  h1 { margin: 0 0 14px; }
+
+  .game-area {
+    width: min(100%, 620px);
+    background: #1f2937;
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .stats {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-weight: bold;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    background: #0b1220;
+    border: 2px solid #64748b;
+    border-radius: 8px;
+    touch-action: none;
+  }
+
+  button, select, input[type="color"] {
+    min-height: 40px;
+    border: 1px solid #475569;
+    border-radius: 7px;
+    padding: 8px;
+    background: #111827;
+    color: white;
+    font-size: 14px;
+  }
+
+  button {
+    cursor: pointer;
+    border: none;
+    background: #16a34a;
+    font-weight: bold;
+  }
+
+  button.secondary { background: #374151; }
+
+  button:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+  }
+
+  .actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .mobile-controls {
+    display: grid;
+    grid-template-columns: repeat(3, 54px);
+    justify-content: center;
+    gap: 5px;
+    margin-top: 12px;
+  }
+
+  .mobile-controls button {
+    min-height: 44px;
+    font-size: 20px;
+  }
+
+  .empty { visibility: hidden; }
+
+  .help {
+    color: #cbd5e1;
+    font-size: 12px;
+    line-height: 1.5;
+    margin: 12px 0 0;
+  }
+
+  /* Einstellungen als aufklappbares Fenster */
+  .settings-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    background: rgba(0,0,0,.72);
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+  }
+
+  .settings-overlay.open { display: flex; }
+
+  .dialog-overlay {
+    display: none; position: fixed; inset: 0; z-index: 11;
+    background: rgba(0,0,0,.72); align-items: center;
+    justify-content: center; padding: 14px;
+  }
+  .dialog-overlay.open { display: flex; }
+  .dialog-panel {
+    width: min(100%, 460px); max-height: 90vh; overflow-y: auto;
+    background: #1f2937; border: 1px solid #475569;
+    border-radius: 14px; padding: 18px;
+  }
+  .dialog-panel h2 { margin: 0; font-size: 20px; }
+  .dialog-panel p { color: #cbd5e1; line-height: 1.5; }
+  .dialog-panel select { width: 100%; }
+  .dialog-panel label { display: block; color: #d1d5db; font-size: 13px; margin: 14px 0 5px; }
+  .dialog-actions { display: flex; gap: 8px; margin-top: 16px; }
+  .dialog-actions button { flex: 1; }
+  .highscore-list { padding-left: 24px; line-height: 1.9; }
+  .highscore-list li { padding-left: 4px; }
+  .online-box { margin-top: 16px; padding-top: 14px; border-top: 1px solid #475569; }
+  .online-box input { width: 100%; min-height: 40px; margin-top: 5px; border: 1px solid #475569; border-radius: 7px; padding: 8px; background: #111827; color: white; }
+  .online-box label { display: block; color: #d1d5db; font-size: 13px; margin: 10px 0 4px; }
+  .online-list { padding-left: 25px; line-height: 1.8; }
+  .online-note { font-size: 12px; color: #cbd5e1; line-height: 1.5; }
+  .online-status { font-size: 13px; color: #cbd5e1; min-height: 20px; margin: 8px 0; overflow-wrap: anywhere; }
+
+  .settings-panel {
+    width: min(100%, 540px);
+    max-height: 90vh;
+    overflow-y: auto;
+    background: #1f2937;
+    border: 1px solid #475569;
+    border-radius: 14px;
+    padding: 18px;
+  }
+
+  .settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .settings-header h2 {
+    font-size: 20px;
+    margin: 0;
+  }
+
+  .close-btn {
+    width: 42px;
+    min-width: 42px;
+    background: #374151;
+    font-size: 20px;
+  }
+
+  .settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 14px;
+  }
+
+  .setting label {
+    display: block;
+    font-size: 13px;
+    margin: 12px 0 5px;
+    color: #d1d5db;
+  }
+
+  .setting select,
+  .setting input[type="color"] {
+    width: 100%;
+  }
+
+  .check-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    font-size: 14px;
+    margin-top: 12px;
+  }
+
+  .check-row input {
+    width: 18px;
+    height: 18px;
+  }
+
+  .full { grid-column: 1 / -1; }
+
+  .settings-footer {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .settings-footer button { flex: 1; }
+
+  .countdown {
+    color: #facc15;
+    font-size: 13px;
+    text-align: center;
+    min-height: 18px;
+    margin: 8px 0 0;
+  }
+
+  @media (max-width: 430px) {
+    body { padding: 8px; }
+    .game-area { padding: 10px; }
+    .settings-grid { grid-template-columns: 1fr; }
+    .full { grid-column: auto; }
+    .actions { grid-template-columns: 1fr 1fr; }
+    .actions button:last-child { grid-column: 1 / -1; }
+  }
+</style>
+</head>
+<body>
+
+<h1>🐍 Snake</h1>
+
+<main class="game-area">
+  <div class="stats">
+    <span>Punkte: <span id="score">0</span></span>
+    <span id="status">Bereit</span>
+  </div>
+
+  <canvas id="game" width="600" height="600"
+          aria-label="Snake-Spielfeld"></canvas>
+
+  <p class="countdown" id="countdown" aria-live="polite"></p>
+
+  <div class="actions">
+    <button id="startBtn">Start / Neustart</button>
+    <button id="pauseBtn" class="secondary">Pause</button>
+    <button id="settingsBtn" class="secondary">⚙ Einstellungen</button>
+    <button id="modeBtn" class="secondary">🎮 Spielmodus</button>
+    <button id="highscoreBtn" class="secondary">🏆 Highscores</button>
+  </div>
+
+  <div class="mobile-controls" aria-label="Steuerung">
+    <button class="empty" tabindex="-1" aria-hidden="true"> </button>
+    <button data-dir="up" aria-label="Oben">↑</button>
+    <button class="empty" tabindex="-1" aria-hidden="true"> </button>
+    <button data-dir="left" aria-label="Links">←</button>
+    <button data-dir="down" aria-label="Unten">↓</button>
+    <button data-dir="right" aria-label="Rechts">→</button>
+  </div>
+
+  <p class="help">
+    Steuerung: WASD oder Pfeiltasten.<br>
+    Du kannst das Spiel auch über die Pfeiltasten auf dem Handy steuern.
+  </p>
+</main>
+
+<!-- Einstellungen sind am Anfang geschlossen -->
+<div class="settings-overlay" id="settingsOverlay">
+  <section class="settings-panel" role="dialog"
+           aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="settings-header">
+      <h2 id="settingsTitle">⚙ Einstellungen</h2>
+      <button id="closeSettings" class="close-btn"
+              aria-label="Einstellungen schließen">✕</button>
+    </div>
+
+    <div class="settings-grid">
+      <div class="setting">
+        <label for="fruit">Frucht</label>
+        <select id="fruit">
+          <option value="apple">🍎 Apfel mit Stiel</option>
+          <option value="orange">🍊 Orange</option>
+          <option value="banana">🍌 Banane</option>
+          <option value="grape">🍇 Trauben</option>
+          <option value="strawberry">🍓 Erdbeere</option>
+          <option value="cherry">🍒 Kirschen</option>
+          <option value="watermelon">🍉 Wassermelone</option>
+          <option value="pear">🍐 Birne</option>
+          <option value="peach">🍑 Pfirsich</option>
+          <option value="lemon">🍋 Zitrone</option>
+        </select>
+      </div>
+
+      <div class="setting">
+        <label for="grid">Spielfeldgröße</label>
+        <select id="grid">
+          <option value="10">10 × 10</option>
+          <option value="15">15 × 15</option>
+          <option value="20" selected>20 × 20</option>
+          <option value="25">25 × 25</option>
+          <option value="30">30 × 30</option>
+          <option value="40">40 × 40</option>
+        </select>
+      </div>
+
+      <div class="setting">
+        <label for="snakeColor">Schlangenfarbe</label>
+        <input type="color" id="snakeColor" value="#22c55e">
+      </div>
+
+      <div class="setting">
+        <label for="headColor">Kopffarbe</label>
+        <input type="color" id="headColor" value="#86efac">
+      </div>
+
+      <div class="setting">
+        <label for="bgColor">Hintergrundfarbe</label>
+        <input type="color" id="bgColor" value="#0b1220">
+      </div>
+
+      <div class="setting">
+        <label for="borderColor">Randfarbe</label>
+        <input type="color" id="borderColor" value="#64748b">
+      </div>
+
+      <div class="setting">
+        <label for="growthAmount">Wachstum pro Frucht</label>
+        <select id="growthAmount">
+          <option value="1">1 Feld</option>
+          <option value="2" selected>2 Felder</option>
+          <option value="3">3 Felder</option>
+        </select>
+      </div>
+
+      <div class="setting">
+        <label for="speed">Startgeschwindigkeit</label>
+        <select id="speed">
+          <option value="180">Langsam</option>
+          <option value="120" selected>Normal</option>
+          <option value="75">Schnell</option>
+          <option value="45">Sehr schnell</option>
+        </select>
+      </div>
+
+      <div class="setting full">
+        <label for="restartDelay">Wartezeit nach Game Over</label>
+        <select id="restartDelay">
+          <option value="0">Keine Wartezeit</option>
+          <option value="1">1 Sekunde</option>
+          <option value="3" selected>3 Sekunden</option>
+          <option value="5">5 Sekunden</option>
+          <option value="10">10 Sekunden</option>
+          <option value="15">15 Sekunden</option>
+          <option value="30">30 Sekunden</option>
+        </select>
+      </div>
+
+      <div class="full">
+        <label class="check-row">
+          <input type="checkbox" id="showGrid" checked>
+          Spielfeldlinien anzeigen
+        </label>
+
+        <label class="check-row">
+          <input type="checkbox" id="growthEnabled" checked>
+          Schlange wächst beim Essen
+        </label>
+
+        <label class="check-row">
+          <input type="checkbox" id="speedEnabled" checked>
+          Schlange wird mit der Zeit schneller
+        </label>
+      </div>
+    </div>
+
+    <div class="settings-footer">
+      <button id="applyBtn">Übernehmen</button>
+      <button id="cancelSettings" class="secondary">Schließen</button>
+    </div>
+  </section>
+</div>
+
+<div class="dialog-overlay" id="modeOverlay">
+  <section class="dialog-panel" role="dialog" aria-modal="true" aria-labelledby="modeTitle">
+    <div class="settings-header">
+      <h2 id="modeTitle">🎮 Spielmodus</h2>
+      <button id="closeMode" class="close-btn" aria-label="Spielmodus schließen">✕</button>
+    </div>
+    <label for="gameMode">Modus auswählen</label>
+    <select id="gameMode">
+      <option value="classic">Klassisch – Wände vermeiden</option>
+      <option value="endless">Endlos – durch die Ränder gehen</option>
+      <option value="timed">60 Sekunden – so viele Punkte wie möglich</option>
+      <option value="obstacles">Hindernisse – Hindernissen ausweichen</option>
+    </select>
+    <div id="obstacleDifficultyWrap">
+      <label for="obstacleDifficulty">Schwierigkeit der Hindernisse</label>
+      <select id="obstacleDifficulty">
+        <option value="easy">Leicht – wenige Hindernisse</option>
+        <option value="medium" selected>Mittel – mehr Hindernisse</option>
+        <option value="hard">Schwer – viele Hindernisse</option>
+      </select>
+    </div>
+    <p>Der ausgewählte Modus wird beim Start einer neuen Runde verwendet.</p>
+    <div class="dialog-actions">
+      <button id="applyMode">Modus übernehmen</button>
+      <button id="cancelMode" class="secondary">Schließen</button>
+    </div>
+  </section>
+</div>
+
+<div class="dialog-overlay" id="highscoreOverlay">
+  <section class="dialog-panel" role="dialog" aria-modal="true" aria-labelledby="highscoreTitle">
+    <div class="settings-header">
+      <h2 id="highscoreTitle">🏆 Highscores</h2>
+      <button id="closeHighscores" class="close-btn" aria-label="Highscores schließen">✕</button>
+    </div>
+    <p>Deine besten Ergebnisse werden auf diesem Gerät gespeichert.</p>
+    <h3>Deine lokalen Highscores</h3>
+    <ol class="highscore-list" id="highscoreList"></ol>
+    <div class="online-box">
+      <h3>🌍 Weltweite Online-Rangliste</h3>
+      <p class="online-note">Verbinde eine Supabase-Datenbank, damit Spieler ihre Punkte online vergleichen können. Der Publishable-/anon-Key ist für den Browser vorgesehen; niemals einen service_role-Schlüssel eintragen.</p>
+      <label for="playerName">Spielername (max. 20 Zeichen)</label>
+      <input id="playerName" maxlength="20" autocomplete="nickname" placeholder="z. B. SnakeFan42">
+      <label for="supabaseUrl">Supabase Project URL</label>
+      <input id="supabaseUrl" inputmode="url" placeholder="https://deinprojekt.supabase.co">
+      <label for="supabaseKey">Supabase Publishable Key / anon Key</label>
+      <input id="supabaseKey" autocomplete="off" placeholder="sb_publishable_… oder anon JWT">
+      <div class="dialog-actions">
+        <button id="saveOnlineConfig">Verbindung speichern</button>
+        <button id="loadOnlineScores" class="secondary">Rangliste laden</button>
+      </div>
+      <p id="onlineStatus" class="online-status" aria-live="polite">Noch nicht verbunden.</p>
+      <label for="onlineMode">Ranglistenmodus</label>
+      <select id="onlineMode">
+        <option value="classic">Klassisch</option>
+        <option value="endless">Endlos</option>
+        <option value="timed">60 Sekunden</option>
+        <option value="obstacles">Hindernisse</option>
+      </select>
+      <ol id="onlineHighscoreList" class="online-list"><li>Verbindung einrichten und Rangliste laden.</li></ol>
+    </div>
+    <div class="dialog-actions">
+      <button id="clearHighscores" class="secondary">Lokale Highscores löschen</button>
+      <button id="closeHighscoresBottom">Schließen</button>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+  const canvas = $("game");
+  const ctx = canvas.getContext("2d", { alpha: false });
+
+  const FRUITS = {
+    apple: "🍎",
+    orange: "🍊",
+    banana: "🍌",
+    grape: "🍇",
+    strawberry: "🍓",
+    cherry: "🍒",
+    watermelon: "🍉",
+    pear: "🍐",
+    peach: "🍑",
+    lemon: "🍋"
+  };
+
+  let cells = 20;
+  let cellSize = canvas.width / cells;
+
+  let snake = [];
+  let food = null;
+
+  let direction = { x: 1, y: 0 };
+  let nextDirection = { x: 1, y: 0 };
+
+  let score = 0;
+  let growthLeft = 0;
+
+  let started = false;
+  let paused = false;
+  let gameOver = false;
+  let won = false;
+
+  let stepMs = 120;
+  let startSpeed = 120;
+  let speedEnabled = true;
+  let growthEnabled = true;
+  let growthAmount = 2;
+  let showGrid = true;
+  let fruitType = "apple";
+  let restartDelay = 3;
+  let gameMode = "classic";
+  let obstacleDifficulty = "medium";
+  let obstacles = [];
+  let timeLeft = 60;
+  let roundStartedAt = 0;
+  let timedElapsed = 0;
+  let timedLastTick = 0;
+  let lastScoreSaved = false;
+
+  let lastFrame = 0;
+  let accumulator = 0;
+  let animationId = 0;
+  let gameOverAt = 0;
+  let queuedDirection = null;
+  let directionChangedThisTick = false;
+
+  const scoreEl = $("score");
+  const statusEl = $("status");
+  const countdownEl = $("countdown");
+  const overlay = $("settingsOverlay");
+  const modeOverlay = $("modeOverlay");
+  const highscoreOverlay = $("highscoreOverlay");
+  const modeNames = {
+    classic: "Klassisch", endless: "Endlos", timed: "60 Sekunden", obstacles: "Hindernisse"
+  };
+  const HIGH_SCORE_KEY = "snakeCustomEditionHighscoresV1";
+
+  function getHighscores() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(HIGH_SCORE_KEY) || "{}");
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch { return {}; }
+  }
+
+  function saveHighscore() {
+    if (lastScoreSaved) return;
+    lastScoreSaved = true;
+    const scores = getHighscores();
+    const key = gameMode;
+    const list = Array.isArray(scores[key]) ? scores[key] : [];
+    list.push({ score, date: new Date().toLocaleDateString("de-DE") });
+    list.sort((a, b) => b.score - a.score);
+    scores[key] = list.slice(0, 5);
+    try { localStorage.setItem(HIGH_SCORE_KEY, JSON.stringify(scores)); } catch {}
+  }
+
+  function renderHighscores() {
+    const scores = getHighscores();
+    const listEl = $("highscoreList");
+    listEl.innerHTML = "";
+    let found = false;
+    Object.keys(modeNames).forEach(key => {
+      const entries = Array.isArray(scores[key]) ? scores[key] : [];
+      const heading = document.createElement("li");
+      heading.value = 1;
+      heading.innerHTML = `<strong>${modeNames[key]}</strong>`;
+      listEl.appendChild(heading);
+      if (entries.length) {
+        found = true;
+        entries.slice(0, 3).forEach((entry, index) => {
+          const item = document.createElement("li");
+          item.style.listStyleType = "circle";
+          item.textContent = `${index + 1}. ${entry.score} Punkte${entry.date ? ` (${entry.date})` : ""}`;
+          listEl.appendChild(item);
+        });
+      } else {
+        const item = document.createElement("li");
+        item.style.listStyleType = "circle";
+        item.textContent = "Noch keine Ergebnisse";
+        listEl.appendChild(item);
+      }
+    });
+  }
+
+  const ONLINE_CONFIG_KEY = "snakeCustomEditionOnlineConfigV1";
+
+  function getOnlineConfig() {
+    try { return JSON.parse(localStorage.getItem(ONLINE_CONFIG_KEY) || "{}"); }
+    catch { return {}; }
+  }
+
+  function setOnlineStatus(message) { $("onlineStatus").textContent = message; }
+
+  function loadOnlineConfigIntoForm() {
+    const config = getOnlineConfig();
+    $("playerName").value = config.playerName || "";
+    $("supabaseUrl").value = config.url || "";
+    $("supabaseKey").value = config.key || "";
+    $("onlineMode").value = gameMode;
+  }
+
+  function normalizedOnlineConfig() {
+    const url = $("supabaseUrl").value.trim().replace(/\/+$/, "");
+    const key = $("supabaseKey").value.trim();
+    const playerName = $("playerName").value.trim().replace(/[<>\u0000-\u001f]/g, "").slice(0, 20);
+    if (url && !/^https:\/\/[a-z0-9.-]+(?::\d+)?$/i.test(url)) throw new Error("Die Supabase Project URL muss mit https:// beginnen und eine gültige Adresse sein.");
+    if (playerName.length < 2) throw new Error("Bitte einen Spielernamen mit mindestens 2 Zeichen eingeben.");
+    if (!url || !key) throw new Error("Bitte Project URL und Publishable-/anon-Key eintragen.");
+    return { url, key, playerName };
+  }
+
+  function saveOnlineConfig() {
+    try {
+      const config = normalizedOnlineConfig();
+      localStorage.setItem(ONLINE_CONFIG_KEY, JSON.stringify(config));
+      setOnlineStatus("Verbindungseinstellungen auf diesem Gerät gespeichert.");
+      loadOnlineScores();
+    } catch (error) { setOnlineStatus(error.message || "Einstellungen konnten nicht gespeichert werden."); }
+  }
+
+  async function supabaseRequest(path, options = {}) {
+    const config = getOnlineConfig();
+    if (!config.url || !config.key || !config.playerName) throw new Error("Bitte zuerst Spielername, Project URL und Key speichern.");
+    const response = await fetch(`${config.url}/rest/v1/${path}`, {
+      ...options,
+      headers: {
+        apikey: config.key,
+        ...(config.key.startsWith("eyJ") ? { Authorization: `Bearer ${config.key}` } : {}),
+        "Content-Type": "application/json",
+        ...(options.headers || {})
+      }
+    });
+    if (!response.ok) {
+      let detail = "";
+      try { detail = (await response.json()).message || ""; } catch {}
+      throw new Error(`Supabase meldet HTTP ${response.status}${detail ? `: ${detail}` : ""}. Prüfe SQL-Setup, URL und Key.`);
+    }
+    if (response.status === 204) return null;
+    const text = await response.text();
+    return text ? JSON.parse(text) : null;
+  }
+
+  async function submitOnlineScore() {
+    const config = getOnlineConfig();
+    if (!config.url || !config.key || !config.playerName || score <= 0) return;
+    try {
+      await supabaseRequest("snake_scores", {
+        method: "POST",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({ player_name: config.playerName, game_mode: gameMode, score: Math.floor(score) })
+      });
+      setOnlineStatus("Punktzahl wurde zur Online-Rangliste hinzugefügt.");
+      if (highscoreOverlay.classList.contains("open")) await loadOnlineScores();
+    } catch (error) {
+      setOnlineStatus(`Online-Ergebnis nicht gespeichert: ${error.message}`);
+    }
+  }
+
+  async function loadOnlineScores() {
+    const list = $("onlineHighscoreList");
+    if (!list) return;
+    list.replaceChildren();
+    const config = getOnlineConfig();
+    const selectedMode = $("onlineMode").value || gameMode;
+    if (!config.url || !config.key || !config.playerName) {
+      list.appendChild(document.createElement("li")).textContent = "Bitte Spielername und Supabase-Verbindung speichern.";
+      setOnlineStatus("Noch nicht verbunden.");
+      return;
+    }
+    setOnlineStatus("Online-Rangliste wird geladen …");
+    try {
+      const query = `snake_scores?select=player_name,game_mode,score,created_at&game_mode=eq.${encodeURIComponent(selectedMode)}&order=score.desc,created_at.asc&limit=10`;
+      const entries = await supabaseRequest(query);
+      if (!Array.isArray(entries) || entries.length === 0) {
+        list.appendChild(document.createElement("li")).textContent = "Noch keine Online-Ergebnisse für diesen Modus.";
+      } else {
+        entries.forEach((entry, index) => {
+          const item = document.createElement("li");
+          const date = entry.created_at ? new Date(entry.created_at).toLocaleDateString("de-DE") : "";
+          item.textContent = `${index + 1}. ${String(entry.player_name || "Spieler").slice(0, 20)} – ${Number(entry.score) || 0} Punkte${date ? ` (${date})` : ""}`;
+          list.appendChild(item);
+        });
+      }
+      setOnlineStatus(`Online-Rangliste geladen: ${modeNames[selectedMode] || selectedMode}.`);
+    } catch (error) {
+      list.appendChild(document.createElement("li")).textContent = "Rangliste konnte nicht geladen werden.";
+      setOnlineStatus(error.message || "Verbindungsfehler.");
+    }
+  }
+
+  function readSettings() {
+    cells = Math.max(10, Math.min(40, Number($("grid").value) || 20));
+    cellSize = canvas.width / cells;
+
+    growthEnabled = $("growthEnabled").checked;
+    growthAmount = Math.max(1, Math.min(3, Number($("growthAmount").value) || 1));
+    speedEnabled = $("speedEnabled").checked;
+    showGrid = $("showGrid").checked;
+    fruitType = $("fruit").value;
+    startSpeed = Math.max(35, Number($("speed").value) || 120);
+    restartDelay = Math.max(0, Math.min(30, Number($("restartDelay").value) || 0));
+    stepMs = startSpeed;
+  }
+
+  function spawnFood() {
+    const occupied = new Set(snake.map(p => `${p.x},${p.y}`));
+    // Im Hindernismodus dürfen Äpfel niemals auf Hindernissen erscheinen.
+    if (gameMode === "obstacles") {
+      obstacles.forEach(p => occupied.add(`${p.x},${p.y}`));
+    }
+    const total = cells * cells;
+
+    if (occupied.size >= total) {
+      won = true;
+      gameOver = true;
+      started = false;
+      gameOverAt = performance.now();
+      statusEl.textContent = "Gewonnen!";
+      return;
+    }
+
+    // Begrenzte Zufallsversuche sind schnell.
+    for (let i = 0; i < 100; i++) {
+      const p = {
+        x: Math.floor(Math.random() * cells),
+        y: Math.floor(Math.random() * cells)
+      };
+
+      if (!occupied.has(`${p.x},${p.y}`)) {
+        food = p;
+        return;
+      }
+    }
+
+    // Sicherer Fallback, falls zufällig kein freies Feld gefunden wird.
+    for (let y = 0; y < cells; y++) {
+      for (let x = 0; x < cells; x++) {
+        if (!occupied.has(`${x},${y}`)) {
+          food = { x, y };
+          return;
+        }
+      }
+    }
+  }
+
+  function spawnObstacles() {
+    obstacles = [];
+    if (gameMode !== "obstacles") return;
+    const counts = { easy: 8, medium: 16, hard: 28 };
+    const wanted = counts[obstacleDifficulty] || 16;
+    const occupied = new Set(snake.map(p => `${p.x},${p.y}`));
+    if (food) occupied.add(`${food.x},${food.y}`);
+    let attempts = 0;
+    while (obstacles.length < wanted && attempts < cells * cells * 4) {
+      attempts++;
+      const p = { x: Math.floor(Math.random() * cells), y: Math.floor(Math.random() * cells) };
+      const key = `${p.x},${p.y}`;
+      // Der Startbereich bleibt frei, damit die Schlange nicht direkt blockiert wird.
+      if (occupied.has(key) || (Math.abs(p.x - snake[0].x) <= 2 && Math.abs(p.y - snake[0].y) <= 2)) continue;
+      occupied.add(key);
+      obstacles.push(p);
+    }
+  }
+
+  function resetGame() {
+    readSettings();
+
+    const center = Math.floor(cells / 2);
+    snake = [
+      { x: center, y: center },
+      { x: center - 1, y: center },
+      { x: center - 2, y: center }
+    ];
+
+    direction = { x: 1, y: 0 };
+    nextDirection = { x: 1, y: 0 };
+    queuedDirection = null;
+    directionChangedThisTick = false;
+
+    score = 0;
+    growthLeft = 0;
+    accumulator = 0;
+    lastFrame = 0;
+
+    started = false;
+    paused = false;
+    gameOver = false;
+    won = false;
+    gameOverAt = 0;
+    timeLeft = 60;
+    roundStartedAt = 0;
+    timedElapsed = 0;
+    timedLastTick = 0;
+    lastScoreSaved = false;
+    obstacles = [];
+
+    scoreEl.textContent = "0";
+    statusEl.textContent = `Bereit: ${modeNames[gameMode]}`;
+    countdownEl.textContent = gameMode === "timed" ? "Runde dauert 60 Sekunden" : "";
+
+    spawnFood();
+    spawnObstacles();
+    draw();
+  }
+
+  function startGame() {
+    if (gameOver) {
+      const elapsed = (performance.now() - gameOverAt) / 1000;
+      if (elapsed < restartDelay) {
+        updateCountdown(performance.now());
+        return;
+      }
+      resetGame();
+    }
+
+    started = true;
+    paused = false;
+    statusEl.textContent = gameMode === "timed" ? "60 s" : "Läuft";
+    countdownEl.textContent = gameMode === "timed" ? "Noch 60 Sekunden" : "";
+    if (!roundStartedAt) roundStartedAt = performance.now();
+    timedLastTick = performance.now();
+    lastFrame = 0;
+    draw();
+  }
+
+  function updateCountdown(now) {
+    if (!gameOver || !gameOverAt) return;
+
+    const elapsed = (now - gameOverAt) / 1000;
+    const remaining = Math.max(0, restartDelay - elapsed);
+
+    if (remaining > 0) {
+      countdownEl.textContent =
+        `Neustart in ${remaining.toFixed(1)} Sekunden`;
+    } else {
+      countdownEl.textContent = "Du kannst eine neue Runde starten.";
+    }
+  }
+
+  function setDirection(x, y) {
+    if (overlay.classList.contains("open")) return;
+
+    if (gameOver) {
+      const elapsed = (performance.now() - gameOverAt) / 1000;
+      if (elapsed < restartDelay) {
+        updateCountdown(performance.now());
+        return;
+      }
+      resetGame();
+      nextDirection = { x, y };
+      direction = { x, y };
+      startGame();
+      return;
+    }
+
+    if (!started) {
+      startGame();
+    }
+
+    if (paused) return;
+
+    // Pro Spielschritt ist nur eine Richtungsänderung erlaubt.
+    // So können schnelle Tastenkombinationen (z. B. A+S+D)
+    // keine mehreren Kurven innerhalb desselben Schritts auslösen.
+    if (directionChangedThisTick || queuedDirection) return;
+
+    if (x === -direction.x && y === -direction.y) return;
+
+    queuedDirection = { x, y };
+    directionChangedThisTick = true;
+  }
+
+  function finishGame(isWin = false) {
+    gameOver = true;
+    started = false;
+    paused = false;
+    won = isWin;
+    gameOverAt = performance.now();
+    statusEl.textContent = isWin ? "Gewonnen!" : (gameMode === "timed" ? "Zeit abgelaufen" : "Game Over");
+    saveHighscore();
+    submitOnlineScore();
+    updateCountdown(gameOverAt);
+    draw();
+  }
+
+  function update() {
+    directionChangedThisTick = false;
+    if (queuedDirection) {
+      nextDirection = queuedDirection;
+      queuedDirection = null;
+    }
+
+    direction = nextDirection;
+
+    const head = {
+      x: snake[0].x + direction.x,
+      y: snake[0].y + direction.y
+    };
+
+    if (gameMode === "endless") {
+      head.x = (head.x + cells) % cells;
+      head.y = (head.y + cells) % cells;
+    } else if (
+      head.x < 0 || head.x >= cells ||
+      head.y < 0 || head.y >= cells
+    ) {
+      finishGame();
+      return;
+    }
+
+    if (obstacles.some(p => p.x === head.x && p.y === head.y)) {
+      finishGame();
+      return;
+    }
+
+    const eating = food && head.x === food.x && head.y === food.y;
+    const tailMoves = !eating && growthLeft === 0;
+    const body = tailMoves ? snake.slice(0, -1) : snake;
+
+    if (body.some(p => p.x === head.x && p.y === head.y)) {
+      finishGame();
+      return;
+    }
+
+    snake.unshift(head);
+
+    if (eating) {
+      score += 10;
+      scoreEl.textContent = String(score);
+
+      if (growthEnabled) {
+        growthLeft += Math.max(0, growthAmount - 1);
+      }
+
+      if (speedEnabled) {
+        stepMs = Math.max(40, startSpeed - Math.floor(score / 10) * 2);
+      } else {
+        stepMs = startSpeed;
+      }
+
+      spawnFood();
+
+      if (gameOver) {
+        draw();
+        return;
+      }
+    }
+
+    if (eating && growthEnabled) {
+      // Schwanz bleibt liegen: Wachstum um mindestens ein Feld.
+    } else if (growthLeft > 0 && growthEnabled) {
+      growthLeft--;
+    } else {
+      snake.pop();
+    }
+  }
+
+  function drawGrid() {
+    if (!showGrid) return;
+
+    ctx.strokeStyle = "rgba(148,163,184,0.15)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+
+    for (let i = 1; i < cells; i++) {
+      const p = i * cellSize;
+      ctx.moveTo(p, 0);
+      ctx.lineTo(p, canvas.height);
+      ctx.moveTo(0, p);
+      ctx.lineTo(canvas.width, p);
+    }
+
+    ctx.stroke();
+  }
+
+  function drawApple(x, y) {
+    // Körper
+    ctx.fillStyle = "#ef4444";
+    ctx.beginPath();
+    ctx.ellipse(
+      x + cellSize * 0.5,
+      y + cellSize * 0.57,
+      cellSize * 0.31,
+      cellSize * 0.29,
+      0, 0, Math.PI * 2
+    );
+    ctx.fill();
+
+    // Oberer Einzug
+    ctx.fillStyle = "#dc2626";
+    ctx.beginPath();
+    ctx.arc(
+      x + cellSize * 0.5,
+      y + cellSize * 0.34,
+      cellSize * 0.12,
+      0, Math.PI * 2
+    );
+    ctx.fill();
+
+    // Stiel
+    ctx.strokeStyle = "#78350f";
+    ctx.lineWidth = Math.max(2, cellSize * 0.09);
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(x + cellSize * 0.5, y + cellSize * 0.35);
+    ctx.lineTo(x + cellSize * 0.56, y + cellSize * 0.13);
+    ctx.stroke();
+
+    // Blatt
+    ctx.fillStyle = "#22c55e";
+    ctx.beginPath();
+    ctx.ellipse(
+      x + cellSize * 0.66,
+      y + cellSize * 0.2,
+      cellSize * 0.15,
+      cellSize * 0.07,
+      -0.45, 0, Math.PI * 2
+    );
+    ctx.fill();
+
+    // Glanzpunkt
+    ctx.fillStyle = "#fecaca";
+    ctx.beginPath();
+    ctx.arc(
+      x + cellSize * 0.37,
+      y + cellSize * 0.48,
+      Math.max(1.3, cellSize * 0.045),
+      0, Math.PI * 2
+    );
+    ctx.fill();
+  }
+
+  function drawObstacles() {
+    obstacles.forEach(p => {
+      const pad = Math.max(1, cellSize * 0.08);
+      const x = p.x * cellSize + pad;
+      const y = p.y * cellSize + pad;
+      const size = cellSize - pad * 2;
+      ctx.fillStyle = obstacleDifficulty === "hard" ? "#dc2626" : obstacleDifficulty === "easy" ? "#a3a3a3" : "#f97316";
+      ctx.beginPath();
+      ctx.roundRect(x, y, size, size, Math.max(2, cellSize * 0.15));
+      ctx.fill();
+      ctx.strokeStyle = "rgba(17,24,39,.65)";
+      ctx.lineWidth = Math.max(1, cellSize * 0.06);
+      ctx.beginPath();
+      ctx.moveTo(x + size * .25, y + size * .25);
+      ctx.lineTo(x + size * .75, y + size * .75);
+      ctx.moveTo(x + size * .75, y + size * .25);
+      ctx.lineTo(x + size * .25, y + size * .75);
+      ctx.stroke();
+    });
+  }
+
+  function drawFruit() {
+    if (!food) return;
+
+    const x = food.x * cellSize;
+    const y = food.y * cellSize;
+
+    if (fruitType === "apple") {
+      drawApple(x, y);
+      return;
+    }
+
+    ctx.font = `${Math.floor(cellSize * 0.88)}px "Apple Color Emoji","Segoe UI Emoji",sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(
+      FRUITS[fruitType] || "🍎",
+      x + cellSize / 2,
+      y + cellSize / 2
+    );
+  }
+
+  function drawSnake() {
+    snake.forEach((part, index) => {
+      const pad = Math.max(1, cellSize * 0.07);
+      const x = part.x * cellSize + pad;
+      const y = part.y * cellSize + pad;
+      const size = cellSize - pad * 2;
+
+      ctx.fillStyle = index === 0
+        ? $("headColor").value
+        : $("snakeColor").value;
+
+      ctx.beginPath();
+      ctx.roundRect(
+        x, y, size, size,
+        Math.max(2, cellSize * 0.18)
+      );
+      ctx.fill();
+
+      if (index === 0) {
+        const eyeR = Math.max(1.5, cellSize * 0.07);
+        const frontX = part.x * cellSize + cellSize / 2
+          + direction.x * cellSize * 0.2;
+        const frontY = part.y * cellSize + cellSize / 2
+          + direction.y * cellSize * 0.2;
+        const sideX = -direction.y * cellSize * 0.16;
+        const sideY = direction.x * cellSize * 0.16;
+
+        ctx.fillStyle = "#111827";
+        ctx.beginPath();
+        ctx.arc(frontX + sideX, frontY + sideY, eyeR, 0, Math.PI * 2);
+        ctx.arc(frontX - sideX, frontY - sideY, eyeR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+  }
+
+  function drawOverlay() {
+    if (started && !paused && !gameOver) return;
+
+    const waitingToStart = !started && !paused && !gameOver;
+
+    // Vor dem Start bleibt das Spielfeld gut sichtbar, damit Hindernisse
+    // schon vor dem Losspielen erkannt werden können.
+    ctx.fillStyle = waitingToStart ? "rgba(0,0,0,0.12)" : "rgba(0,0,0,0.60)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const panelWidth = canvas.width * 0.78;
+    const panelHeight = waitingToStart ? 104 : 92;
+    ctx.fillStyle = waitingToStart ? "rgba(15,23,42,0.78)" : "rgba(15,23,42,0.45)";
+    ctx.beginPath();
+    ctx.roundRect(centerX - panelWidth / 2, centerY - panelHeight / 2,
+      panelWidth, panelHeight, 14);
+    ctx.fill();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `bold ${Math.max(20, canvas.width * 0.05)}px Arial`;
+
+    let message = "Drücke WASD oder Pfeiltasten";
+    if (paused) message = "PAUSE";
+    if (gameOver) message = won ? "GEWONNEN!" : (gameMode === "timed" ? "ZEIT ABGELAUFEN" : "GAME OVER");
+
+    ctx.fillText(message, centerX, centerY - 12);
+    ctx.font = `${Math.max(14, canvas.width * 0.025)}px Arial`;
+    ctx.fillText(`Modus: ${modeNames[gameMode]}`, centerX, centerY + 25);
+    if (waitingToStart && gameMode === "obstacles") {
+      ctx.font = `${Math.max(12, canvas.width * 0.021)}px Arial`;
+      ctx.fillText("Hindernisse sind bereits eingezeichnet", centerX, centerY + 44);
+    }
+  }
+
+  function draw() {
+    ctx.fillStyle = $("bgColor").value;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    drawGrid();
+    drawObstacles();
+    drawFruit();
+    drawSnake();
+
+    ctx.strokeStyle = $("borderColor").value;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(1.5, 1.5, canvas.width - 3, canvas.height - 3);
+
+    drawOverlay();
+
+    // Im Game-over-Bildschirm den Startplatz der nächsten Runde markieren.
+    if (gameOver) drawNextRoundStartPoint();
+  }
+
+  function drawNextRoundStartPoint() {
+    const center = Math.floor(cells / 2);
+    const x = center * cellSize;
+    const y = center * cellSize;
+    const pad = Math.max(1, cellSize * 0.07);
+    const size = cellSize - pad * 2;
+
+    // Vorschau der Startschlange: Kopf in der Mitte, Körper links davon.
+    ctx.save();
+    ctx.globalAlpha = 0.95;
+    for (let i = 2; i >= 0; i--) {
+      const sx = (center - i) * cellSize + pad;
+      const sy = y + pad;
+      ctx.fillStyle = i === 0 ? $("headColor").value : $("snakeColor").value;
+      ctx.beginPath();
+      ctx.roundRect(sx, sy, size, size, Math.max(2, cellSize * 0.18));
+      ctx.fill();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // Deutlicher Ring markiert den Kopf bzw. Startpunkt.
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = Math.max(2, cellSize * 0.1);
+    ctx.beginPath();
+    ctx.arc(x + cellSize / 2, y + cellSize / 2, cellSize * 0.42, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.font = `bold ${Math.max(12, canvas.width * 0.022)}px Arial`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(15,23,42,0.95)";
+    ctx.strokeText("Startpunkt nächste Runde", canvas.width / 2, y + cellSize + 14);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText("Startpunkt nächste Runde", canvas.width / 2, y + cellSize + 14);
+    ctx.restore();
+  }
+
+  function togglePause() {
+    if (!started || gameOver) return;
+
+    if (!paused && gameMode === "timed" && timedLastTick) {
+      timedElapsed += (performance.now() - timedLastTick) / 1000;
+    }
+    paused = !paused;
+    if (!paused) timedLastTick = performance.now();
+    statusEl.textContent = paused ? "Pause" : (gameMode === "timed" ? `${Math.ceil(Math.max(0, 60 - timedElapsed))} s` : "Läuft");
+    accumulator = 0;
+    lastFrame = 0;
+    draw();
+  }
+
+  function openSettings() {
+    overlay.classList.add("open");
+    $("closeSettings").focus();
+  }
+
+  function closeSettings() {
+    overlay.classList.remove("open");
+    $("settingsBtn").focus();
+    draw();
+  }
+
+  function openModeDialog() {
+    $("gameMode").value = gameMode;
+    $("obstacleDifficulty").value = obstacleDifficulty;
+    $("obstacleDifficultyWrap").style.display = $("gameMode").value === "obstacles" ? "block" : "none";
+    modeOverlay.classList.add("open");
+  }
+  function closeModeDialog() { modeOverlay.classList.remove("open"); draw(); }
+  function openHighscores() { renderHighscores(); loadOnlineConfigIntoForm(); highscoreOverlay.classList.add("open"); loadOnlineScores(); }
+  function closeHighscoreDialog() { highscoreOverlay.classList.remove("open"); }
+
+  $("modeBtn").addEventListener("click", openModeDialog);
+  $("closeMode").addEventListener("click", closeModeDialog);
+  $("cancelMode").addEventListener("click", closeModeDialog);
+  $("gameMode").addEventListener("change", () => {
+    $("obstacleDifficultyWrap").style.display = $("gameMode").value === "obstacles" ? "block" : "none";
+  });
+  $("applyMode").addEventListener("click", () => {
+    gameMode = $("gameMode").value;
+    obstacleDifficulty = $("obstacleDifficulty").value;
+    closeModeDialog();
+    resetGame();
+    statusEl.textContent = `Bereit: ${modeNames[gameMode]}`;
+  });
+  modeOverlay.addEventListener("click", event => { if (event.target === modeOverlay) closeModeDialog(); });
+
+  $("highscoreBtn").addEventListener("click", openHighscores);
+  $("saveOnlineConfig").addEventListener("click", saveOnlineConfig);
+  $("loadOnlineScores").addEventListener("click", loadOnlineScores);
+  $("onlineMode").addEventListener("change", loadOnlineScores);
+  $("closeHighscores").addEventListener("click", closeHighscoreDialog);
+  $("closeHighscoresBottom").addEventListener("click", closeHighscoreDialog);
+  highscoreOverlay.addEventListener("click", event => { if (event.target === highscoreOverlay) closeHighscoreDialog(); });
+  $("clearHighscores").addEventListener("click", () => {
+    if (confirm("Möchtest du wirklich alle gespeicherten Highscores löschen?")) {
+      try { localStorage.removeItem(HIGH_SCORE_KEY); } catch {}
+      renderHighscores();
+    }
+  });
+
+  $("settingsBtn").addEventListener("click", openSettings);
+  $("closeSettings").addEventListener("click", closeSettings);
+  $("cancelSettings").addEventListener("click", closeSettings);
+
+  overlay.addEventListener("click", event => {
+    if (event.target === overlay) closeSettings();
+  });
+
+  $("applyBtn").addEventListener("click", () => {
+    resetGame();
+    closeSettings();
+  });
+
+  $("startBtn").addEventListener("click", () => {
+    if (gameOver) {
+      const elapsed = (performance.now() - gameOverAt) / 1000;
+      if (elapsed < restartDelay) {
+        updateCountdown(performance.now());
+        return;
+      }
+    }
+
+    resetGame();
+    startGame();
+  });
+
+  $("pauseBtn").addEventListener("click", togglePause);
+
+  // Farben und Frucht werden sofort dargestellt.
+  ["snakeColor", "headColor", "bgColor", "borderColor"].forEach(id => {
+    $(id).addEventListener("input", draw);
+  });
+
+  $("fruit").addEventListener("change", () => {
+    fruitType = $("fruit").value;
+    draw();
+  });
+
+  $("showGrid").addEventListener("change", () => {
+    showGrid = $("showGrid").checked;
+    draw();
+  });
+
+  document.querySelectorAll("[data-dir]").forEach(button => {
+    button.addEventListener("click", () => {
+      const directions = {
+        up: [0, -1],
+        down: [0, 1],
+        left: [-1, 0],
+        right: [1, 0]
+      };
+
+      const d = directions[button.dataset.dir];
+      setDirection(d[0], d[1]);
+    });
+  });
+
+  document.addEventListener("keydown", event => {
+    if (overlay.classList.contains("open")) {
+      if (event.key === "Escape") closeSettings();
+      return;
+    }
+    if (modeOverlay.classList.contains("open")) {
+      if (event.key === "Escape") closeModeDialog();
+      return;
+    }
+    if (highscoreOverlay.classList.contains("open")) {
+      if (event.key === "Escape") closeHighscoreDialog();
+      return;
+    }
+
+    const key = event.key.toLowerCase();
+
+    const directions = {
+      arrowup: [0, -1], w: [0, -1],
+      arrowdown: [0, 1], s: [0, 1],
+      arrowleft: [-1, 0], a: [-1, 0],
+      arrowright: [1, 0], d: [1, 0]
+    };
+
+    if (directions[key]) {
+      event.preventDefault();
+      setDirection(directions[key][0], directions[key][1]);
+    }
+
+    if (key === " " && started && !gameOver) {
+      event.preventDefault();
+      togglePause();
+    }
+  });
+
+  function frame(timestamp) {
+    animationId = requestAnimationFrame(frame);
+
+    if (gameOver) {
+      updateCountdown(timestamp);
+      return;
+    }
+
+    if (started && !paused && gameMode === "timed" && roundStartedAt) {
+      if (timedLastTick) {
+        timedElapsed += (timestamp - timedLastTick) / 1000;
+        timedLastTick = timestamp;
+      }
+      timeLeft = Math.max(0, 60 - timedElapsed);
+      statusEl.textContent = `${Math.ceil(timeLeft)} s`;
+      countdownEl.textContent = `Noch ${Math.ceil(timeLeft)} Sekunden`;
+      if (timeLeft <= 0) {
+        finishGame();
+        return;
+      }
+    }
+
+    if (!lastFrame) lastFrame = timestamp;
+
+    const delta = Math.min(timestamp - lastFrame, 100);
+    lastFrame = timestamp;
+
+    if (started && !paused) {
+      accumulator += delta;
+
+      let steps = 0;
+      while (accumulator >= stepMs && steps < 3) {
+        update();
+        accumulator -= stepMs;
+        steps++;
+
+        if (!started || paused || gameOver) break;
+      }
+
+      // Keine große Nachholschleife nach einem Ruckler.
+      if (steps === 3) accumulator = 0;
+
+      draw();
+    }
+  }
+
+  resetGame();
+  animationId = requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>
